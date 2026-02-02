@@ -1,34 +1,39 @@
+# api/index.py - Deploy to Vercel as-is
 import json
-import os
+import numpy as np
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-import numpy as np
 
-app = FastAPI()
+app = FastAPI(title="Latency Analytics")
 
-# Enable CORS for POST from anywhere
+# CORS for POST from any origin
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["POST"],
     allow_headers=["*"],
 )
 
 @app.post("/")
-async def analytics(request: Request):
+async def compute_metrics(request: Request):
     body = await request.json()
-    regions = body["regions"]
-    threshold_ms = body["threshold_ms"]
+    regions = body.get("regions", [])
+    threshold_ms = body.get("threshold_ms", 0)
     
-    # Load sample data (in real: upload q-vercel-latency.json to repo as data.json)
-    with open("data.json", "r") as f:  # Put q-vercel-latency.json here, rename to data.json
+    # Load bundled telemetry data
+    with open("data.json", "r") as f:
         telemetry = json.load(f)
     
     results = {}
     for region in regions:
         region_data = [r for r in telemetry if r.get("region") == region]
-        latencies = np.array([r["latency_ms"] for r in region_data])
-        uptimes = [r["uptime"] for r in region_data]
+        if not region_data:
+            results[region] = {"avg_latency": 0, "p95_latency": 0, "avg_uptime": 0, "breaches": 0}
+            continue
+        
+        latencies = np.array([r.get("latency_ms", 0) for r in region_data])
+        uptimes = [r.get("uptime", 0) for r in region_data]
         
         results[region] = {
             "avg_latency": float(np.mean(latencies)),
@@ -36,4 +41,5 @@ async def analytics(request: Request):
             "avg_uptime": float(np.mean(uptimes)),
             "breaches": int(np.sum(latencies > threshold_ms))
         }
+    
     return results
