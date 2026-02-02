@@ -1,0 +1,14 @@
+name: My First Action  # Name shown in GitHub UI
+
+on:  # When to run it
+  workflow_dispatch:  # Lets you trigger manually
+
+jobs:  # Set of tasks
+  hello-job:  # Job name
+    runs-on: ubuntu-latest  # Free Linux machine GitHub provides
+    steps:
+      - name: Checkout repo  # Step 1: Grab your code
+        uses: actions/checkout@v4
+      
+      - name: 23f2005610@ds.study.iitm.ac.in  # REQUIRED: Your email here
+        run: echo "Hello from my GitHub Action! Email step complete."  # Simple command
